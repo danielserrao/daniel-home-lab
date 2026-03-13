@@ -1,0 +1,120 @@
+---
+# Source: loki/charts/minio/templates/statefulset.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: loki-minio-svc
+  labels:
+    app: minio
+    chart: minio-5.4.0
+    release: loki
+    heritage: Helm
+spec:
+  publishNotReadyAddresses: true
+  clusterIP: None
+  ports:
+    - name: http
+      port: 9000
+      protocol: TCP
+      targetPort: 9000
+  selector:
+    app: minio
+    release: loki
+---
+# Source: loki/charts/minio/templates/statefulset.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: loki-minio
+  labels:
+    app: minio
+    chart: minio-5.4.0
+    release: loki
+    heritage: Helm
+spec:
+  updateStrategy:
+    type: RollingUpdate
+  podManagementPolicy: "Parallel"
+  serviceName: loki-minio-svc
+  replicas: 1
+  selector:
+    matchLabels:
+      app: minio
+      release: loki
+  template:
+    metadata:
+      name: loki-minio
+      labels:
+        app: minio
+        release: loki
+      annotations:
+        checksum/secrets: a24420cd2e540a1a4450d0c9c9eec9c54974c87203e17500a7e7ab32e762b639
+        checksum/config: c6991decd6e21178368a30e50fface4a5e2be73d6f997ade38de9d235be74fb5
+    spec:
+      securityContext:
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        runAsGroup: 1000
+        runAsUser: 1000
+      serviceAccountName: minio-sa
+      containers:
+        - name: minio
+          image: quay.io/minio/minio:RELEASE.2024-12-18T13-15-44Z
+          imagePullPolicy: IfNotPresent
+          command: [
+            "/bin/sh",
+            "-ce",
+            "/usr/bin/docker-entrypoint.sh minio server http://loki-minio-{0...0}.loki-minio-svc.default.svc/export-{0...1} -S /etc/minio/certs/ --address :9000 --console-address :9001"
+          ]
+          volumeMounts:
+            - name: export-0
+              mountPath: /export-0
+            - name: export-1
+              mountPath: /export-1            
+          ports:
+            - name: http
+              containerPort: 9000
+            - name: http-console
+              containerPort: 9001
+          env:
+            - name: MINIO_ROOT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: loki-minio
+                  key: rootUser
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: loki-minio
+                  key: rootPassword
+            - name: MINIO_PROMETHEUS_AUTH_TYPE
+              value: "public"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+          securityContext: 
+            readOnlyRootFilesystem: false      
+      volumes:
+        - name: minio-user
+          secret:
+            secretName: loki-minio        
+  volumeClaimTemplates:
+    - apiVersion: v1
+      kind: PersistentVolumeClaim
+      metadata:
+        name: export-0
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: 5Gi
+    - apiVersion: v1
+      kind: PersistentVolumeClaim
+      metadata:
+        name: export-1
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: 5Gi

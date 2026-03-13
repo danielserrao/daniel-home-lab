@@ -1,0 +1,60 @@
+alloy:
+  clustering:
+    enabled: false
+    name: ""
+    portName: http
+  configMap:
+    content: |
+      // Discover all pods in the cluster
+      discovery.kubernetes "pods" {
+        role = "pod"
+      }
+
+      // Convert pod targets into file paths under /var/log/pods
+      discovery.relabel "pod_logs" {
+        targets = discovery.kubernetes.pods.targets
+
+        rule {
+          source_labels = ["__meta_kubernetes_pod_uid"]
+          target_label  = "__path__"
+          replacement   = "/var/log/pods/*$1/*.log"
+        }
+
+        // Add useful labels
+        rule {
+          source_labels = ["__meta_kubernetes_namespace"]
+          target_label  = "namespace"
+        }
+
+        rule {
+          source_labels = ["__meta_kubernetes_pod_name"]
+          target_label  = "pod"
+        }
+
+        rule {
+          source_labels = ["__meta_kubernetes_pod_container_name"]
+          target_label  = "container"
+        }
+
+        rule {
+          source_labels = ["__meta_kubernetes_node_name"]
+          target_label  = "node"
+        }
+      }
+
+      // Read container log files from the node
+      loki.source.kubernetes "pods" {
+        targets    = discovery.relabel.pod_logs.output
+        forward_to = [loki.write.default.receiver]
+      }
+
+      // Send logs to Loki service
+      loki.write "default" {
+        endpoint {
+          url = "http://loki-gateway.default.svc.cluster.local/loki/api/v1/push"
+        }
+      }
+  mounts:
+    dockercontainers: true
+    extra: []
+    varlog: true

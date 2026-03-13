@@ -1,0 +1,42 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: cluster-challenge
+  namespace: cnpg-system
+spec:
+  imageName: ghcr.io/cloudnative-pg/postgresql:16
+  instances: 1
+  enableSuperuserAccess: true
+  superuserSecret:
+    name: postgres-secret
+  storage:
+    size: 1Gi
+  bootstrap:
+    initdb:
+      database: minimalapidb
+      secret:
+        name: postgres-secret
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-secret
+  namespace: cnpg-system
+type: Opaque
+data:
+  username: cG9zdGdyZXM=
+  password: cG9zdGdyZXM=
+  POSTGRES_USER: cG9zdGdyZXM=
+  POSTGRES_PASSWORD: cG9zdGdyZXM=
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: minimalapidb
+  namespace: cnpg-system
+spec:
+  name: minimalapidb
+  owner: postgres
+  cluster:
+    name: cluster-challenge

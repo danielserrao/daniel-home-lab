@@ -1,0 +1,28 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - charts/minio/templates/configmap.yaml
+  - charts/minio/templates/console-service.yaml
+  - charts/minio/templates/post-job.yaml
+  - charts/minio/templates/secrets.yaml
+  - charts/minio/templates/service.yaml
+  - charts/minio/templates/serviceaccount.yaml
+  - charts/minio/templates/statefulset.yaml
+  - templates/backend/clusterrole.yaml
+  - templates/backend/clusterrolebinding.yaml
+  - templates/config.yaml
+  - templates/gateway/configmap-gateway.yaml
+  - templates/gateway/deployment-gateway-nginx.yaml
+  - templates/gateway/service-gateway.yaml
+  - templates/loki-canary/daemonset.yaml
+  - templates/loki-canary/service.yaml
+  - templates/loki-canary/serviceaccount.yaml
+  - templates/results-cache/service-results-cache-headless.yaml
+  - templates/results-cache/statefulset-results-cache.yaml
+  - templates/runtime-configmap.yaml
+  - templates/service-memberlist.yaml
+  - templates/serviceaccount.yaml
+  - templates/single-binary/service-headless.yaml
+  - templates/single-binary/service.yaml
+  - templates/single-binary/statefulset.yaml
+  - templates/tests/test-canary.yaml

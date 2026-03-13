@@ -1,0 +1,25 @@
+---
+# Source: nginx-gateway-fabric/templates/nginxproxy.yaml
+apiVersion: gateway.nginx.org/v1alpha2
+kind: NginxProxy
+metadata:
+  name: nginx-gateway-fabric-proxy-config
+  namespace: gateway-api
+  labels:
+    helm.sh/chart: nginx-gateway-fabric-2.4.2
+    app.kubernetes.io/name: nginx-gateway-fabric
+    app.kubernetes.io/instance: nginx-gateway-fabric
+    app.kubernetes.io/version: "2.4.2"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  kubernetes:
+    deployment:
+      replicas: 1
+      container:
+        image:
+          pullPolicy: IfNotPresent
+          repository: ghcr.io/nginx/nginx-gateway-fabric/nginx
+          tag: 2.4.2
+    service:
+      externalTrafficPolicy: Local
+      type: LoadBalancer

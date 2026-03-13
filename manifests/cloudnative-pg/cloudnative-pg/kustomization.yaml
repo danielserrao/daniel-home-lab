@@ -1,0 +1,11 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - templates/config.yaml
+  - templates/deployment.yaml
+  - templates/monitoring-configmap.yaml
+  - templates/mutatingwebhookconfiguration.yaml
+  - templates/podmonitor.yaml
+  - templates/rbac.yaml
+  - templates/service.yaml
+  - templates/validatingwebhookconfiguration.yaml

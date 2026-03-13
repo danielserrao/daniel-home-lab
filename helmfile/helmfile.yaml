@@ -1,0 +1,47 @@
+repositories:
+  - name: prometheus-community
+    url: https://prometheus-community.github.io/helm-charts
+  - name: grafana
+    url: https://grafana.github.io/helm-charts
+  - name: cnpg
+    url: https://cloudnative-pg.github.io/charts
+
+releases:
+  - name: kube-prometheus-stack
+    namespace: default
+    chart: prometheus-community/kube-prometheus-stack
+    values:
+      - default-helm-values/kps-values.yaml
+    installed: true
+    version: 82.4.3
+
+  - name: loki
+    namespace: default
+    chart: grafana/loki
+    values:
+      - default-helm-values/loki-single-binary-values.yaml
+    installed: true
+    version: 6.53.0
+
+  - name: alloy
+    namespace: default
+    chart: grafana/alloy
+    values:
+      - default-helm-values/alloy-values.yaml
+    installed: true
+    version: 1.6.0
+
+  - name: cloudnative-pg
+    namespace: cnpg-system
+    chart: cnpg/cloudnative-pg
+    values:
+      - crds:
+          create: false
+    installed: true
+    version: 0.27.1
+
+  - name: nginx-gateway-fabric
+    namespace: gateway-api
+    chart: oci://ghcr.io/nginx/charts/nginx-gateway-fabric
+    createNamespace: true
+    installed: true

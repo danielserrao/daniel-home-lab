@@ -1,0 +1,30 @@
+---
+# Source: loki/templates/results-cache/service-results-cache-headless.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: loki-results-cache
+  labels:
+    helm.sh/chart: loki-6.53.0
+    app.kubernetes.io/name: loki
+    app.kubernetes.io/instance: loki
+    app.kubernetes.io/version: "3.6.5"
+    app.kubernetes.io/component: "memcached-results-cache"
+  annotations:
+    {}
+  namespace: "default"
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+    - name: memcached-client
+      port: 11211
+      targetPort: client
+    - name: http-metrics
+      port: 9150
+      targetPort: http-metrics
+    
+  selector:
+    app.kubernetes.io/name: loki
+    app.kubernetes.io/instance: loki
+    app.kubernetes.io/component: "memcached-results-cache"

@@ -1,0 +1,66 @@
+---
+# Source: alloy/templates/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alloy
+  namespace: default
+  labels:
+    helm.sh/chart: alloy-1.6.0
+    app.kubernetes.io/name: alloy
+    app.kubernetes.io/instance: alloy
+    app.kubernetes.io/version: "v1.13.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: alloy
+    app.kubernetes.io/component: config
+data:
+  config.alloy: |-
+    // Discover all pods in the cluster
+    discovery.kubernetes "pods" {
+      role = "pod"
+    }
+    
+    // Convert pod targets into file paths under /var/log/pods
+    discovery.relabel "pod_logs" {
+      targets = discovery.kubernetes.pods.targets
+    
+      rule {
+        source_labels = ["__meta_kubernetes_pod_uid"]
+        target_label  = "__path__"
+        replacement   = "/var/log/pods/*$1/*.log"
+      }
+    
+      // Add useful labels
+      rule {
+        source_labels = ["__meta_kubernetes_namespace"]
+        target_label  = "namespace"
+      }
+    
+      rule {
+        source_labels = ["__meta_kubernetes_pod_name"]
+        target_label  = "pod"
+      }
+    
+      rule {
+        source_labels = ["__meta_kubernetes_pod_container_name"]
+        target_label  = "container"
+      }
+    
+      rule {
+        source_labels = ["__meta_kubernetes_node_name"]
+        target_label  = "node"
+      }
+    }
+    
+    // Read container log files from the node
+    loki.source.kubernetes "pods" {
+      targets    = discovery.relabel.pod_logs.output
+      forward_to = [loki.write.default.receiver]
+    }
+    
+    // Send logs to Loki service
+    loki.write "default" {
+      endpoint {
+        url = "http://loki-gateway.default.svc.cluster.local/loki/api/v1/push"
+      }
+    }

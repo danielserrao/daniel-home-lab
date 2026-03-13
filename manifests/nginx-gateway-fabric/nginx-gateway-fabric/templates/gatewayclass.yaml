@@ -1,0 +1,19 @@
+---
+# Source: nginx-gateway-fabric/templates/gatewayclass.yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: nginx
+  labels:
+    helm.sh/chart: nginx-gateway-fabric-2.4.2
+    app.kubernetes.io/name: nginx-gateway-fabric
+    app.kubernetes.io/instance: nginx-gateway-fabric
+    app.kubernetes.io/version: "2.4.2"
+    app.kubernetes.io/managed-by: Helm
+spec:
+  controllerName: gateway.nginx.org/nginx-gateway-controller
+  parametersRef:
+    group: gateway.nginx.org
+    kind: NginxProxy
+    name: nginx-gateway-fabric-proxy-config
+    namespace: gateway-api
