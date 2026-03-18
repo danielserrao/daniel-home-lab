@@ -4,6 +4,7 @@ This is just my personal and public home lab for the purpose of doing tests and 
 
 Feel free to fork it and reuse it.
 
+
 # Environments / Clusters naming convention
 
 This is one possible naming convention, but should be updated according the organization requirements, services, architecture, preferences, etc.
@@ -12,7 +13,7 @@ The naming convention is `<cloud>-<env>-<cluster-type>-<index>`. Possible values
 
 cloud: `aws`, `azu`, `gcp`, `dnl` (3 letters contained in your first name. Used when it is a local cluster)  
 env: `loc` (local), `dev`, `stg`, `prd`.  
-cluster-type: `obs` (observability), `stm` (Space Traffic Management), `dts` (Data & Tracking Services)  
+cluster-type: `obs` (Observability), `man` (Management), etc 
 index: `001`, `002`, `003`, etc  
 
 
@@ -29,6 +30,7 @@ The manifests created in the repo were tested on Ubuntu 24.04 LTS with the follo
 - yq v4.52.4
 
 This will probably still work with newer versions or with an alternative of Minikube, such as kind or k3d.
+
 
 # Quick start deploying to local kubernetes cluster
 
@@ -88,138 +90,25 @@ Query that will test if logs are being pulled successfully
 - Query `{namespace="default"}` which will return the logs of all the pods running in the default namespace. Feel free to check the logs on other namespaces.
 
 
-# Add or update Kubernetes resources (e.g.: Workloads, Configuration, Storage, etc) in environments
+# Other documentation
 
-## Add and deploy a new set of K8s resources  
-
-When wanting to deploy new set of K8s resources (e.g.: Grafana, Loki, etc), we use [Kustomize](https://kubectl.docs.kubernetes.io/guides/introduction/kustomize/) and also frequently [Helm](https://helm.sh/docs).
-
-We have the following options:
-
-#### Reuse helm charts
-
-If you have a new application that you want to deploy and a official (or good) helm chart for it already exist, you can add it at `helmfile/helmfile.yaml`.
-
-Then execute the command `./update-manifests.sh` and you can confirm that a new folder with the application manifests was created. Let's follow the Loki application as example with the folder `manifests/loki`.
-
-You can add files under `manifests/loki` and update `manifests/loki/kustomization.yaml` if you intend to override the default configuration of this application or add extra k8s resources, but you should not change anything inside `manifests/loki/loki` because it will be overrided by `./update-manifests.sh`. Such changes will update the application on every environment using it.
-
-If there isn't a proper helm chart and the application will be deployed by other teams/customers, I would suggest create a helm chart for it and follow the same above instructions, otherwise I suggest to simply create the manifests as explained below. The reason for this is because helm is usually better for packaging and sharing with other teams/customers that might don't know much about kubernetes and kustomize is usually better when used internally by a team with advanced knowledge in kubernetes. 
-
-#### Use Kustomize
-
-If an official Kustomization (Base manifests + patches/overlays) is available for the application, then this might be a good option:
-
-- Add the Kustomization folder under `manifests` with the name of the application
-- Validate the final result with the command `kustomize build manifests/<kustomization>`
-- Create a README.md under the folder `manifests/<kustomization>` explaining the source and version of the kustomization and how to update it when new versions are available.
-
-#### Create manifests from scratch
-
-If a proper helm chart or kustomization to deploy the application don't exist and the manifests will be used internally only, you can:
-
-- create a new folder under `manifests` with the name of the application
-- create the K8s manifests to deploy this application under `manifests/<application>`
-- create the file `manifests/<application>/kustomization.yaml` and add all the manifests as [resources](https://kubectl.docs.kubernetes.io/guides/example/inline_patch/#base).
-- validate the final result with the command `kustomize build manifests/<application>`
+- [Add or update applications in environments](docs/add-update-apps.md)
+- [Architecture Overview of the Observability components in the Cluster](docs/architecture-overview.png) (Implementation in progress)
+- [Deployment Process Architecture](docs/deployment-process-architecture.png) (Implementation in progress)
+- [Load Balancing and routing](alb-nginx.md) (Implementation in progress)
+- [Known Issues](known-issues.md)
+- [Trade-offs between deploying with pipeline versus deploying with a GitOps Operator](pipelines-vs-gitops-trade-offs.md)
 
 
-## Deploy or update kubernetes resources in environments
+# TODO (Put all below Issues on GitHub issues section and remove them from this README.md)
 
-Make sure the applications that you want to be deployed to be added as resources on `environments/<cluster-name>/kustomization.yaml`. If needed, you can also override k8s manifests using kustomize.
-
-If you want to deploy to a local cluster, you can follow the above section `Quick start deploying to local kubernetes cluster`.
-
-If you want to deploy to a different environment such as development, staging or production, you will need to make a merge request to the `main` branch which should be reviewed, approved and merged. Then a GitOps Operator such as Flux or ArgoCD will check the desired state of the applications and deploy them into the cluster.
-
-As an example, ArgoCD can have an ApplicationSet for each environment (development, staging and production) and iterate all folders inside each environment folder (`environments/<environment>`). Then deploy to the cluster with the same name as those folders, following the related configuration.
-
-# Known issues
-
-## loki-helm-test Error
-
-The pod loki-helm-test gets into Error state sometimes. It appears that this happens because the container may run the test before the service loki-canary is ready. 
-
-To fix this, a readiness probe can be implemented to make loki-helm-test wait for loki-canary to be ready.
-
-We can also implement alerting to let us know when pods such as loki-helm-test are not Ready for more than 2 minutes (or more depending on workloads), indicating that something might be wrong.
-
-This error doesn't break loki functionality, but it would be nice to fix it.
-
-## Idempotency broken on Grafana
-
-Some fields such as `checksum/secret` and `admin-password` get a different value on every build.
-
-These can probably be fixed after making an improvement to get secrets from an Secret Manager (e.g.: AWS Secret Manager, Vault, etc) using the External Secrets Operator.
-
-## Postgresql CRD annotation too long
-
-When installing the CloudNativePG Helm chart (Helm), Helm stores the full rendered manifest inside annotations, creating the error `The CustomResourceDefinition "poolers.postgresql.cnpg.io" is invalid: metadata.annotations: Too long: may not be more than 262144 bytes`.
-
-The temporary solution for this is to disable CRDs creation on the helm chart and manually create the CRDS into the folder `manifests/cloudnative-pg/crds` with the command:
-
-```
-VERSION=1.28.1
-
-curl -L https://github.com/cloudnative-pg/cloudnative-pg/releases/download/v${VERSION}/cnpg-${VERSION}.yaml | yq 'select(.kind == "CustomResourceDefinition")' > manifests/cloudnative-pg/crds/cnpg-${VERSION}.yaml
-```
-
-Then make sure the file `cnpg-${VERSION}.yaml` is included in the `manifests/cloudnative-pg/kustomization.yaml` and make sure that only on `cnpg-*.yaml` is added to avoid duplications or conflicts.
-
-# Architecture Overview of the Applications running in the Cluster
-
-Check the image at files/architecture-overview.png.
-
-In this case the architecture in this image is more completed than the solution in this repo since I will need more time to complete it.
-
-# Deployment Process Architecture
-
-Check image at files/deployment-process-architecture.png.
-
-
-# Trade-offs between deploying with pipeline versus deploying with a GitOps Operator
-
-| Dimension | Deploying with Pipeline | Deploying with GitOps Operator |
-| --- | --- | --- |
-| Deployment trigger     | Push-based (CI/CD runs `kubectl`/`helm` on success).                         | Pull-based (operator reconciles cluster state from Git). |
-| Source of truth        | Can be artifacts or Git repo                                                 | Git repo is the single source of truth for desired state. |
-| Drift management       | Requires extra steps to detect/repair drift.                                 | Continuous reconciliation fixes drift automatically. |
-| Audit trail            | Deployment details might be fragmented between Git history and pipeline logs | Git history shows who changed desired state and when. |
-| Rollbacks              | Scripted/conditional; depends on pipeline tooling.                           | `git revert` restores desired state; operator reconciles. |
-| Blast radius control   | Depends on pipeline targeting and credentials.                               | Can scope operators per cluster/namespace and use RBAC. |
-| Secrets handling       | Often injected at deploy time by CI.                                         | Typically managed via sealed/external secrets integrated with GitOps. |
-| Change visibility      | Requires pipeline logs or release dashboards.                                | Git PRs show diffs; operator can surface sync status. |
-| Operational complexity | Simpler if you already run CI/CD only.                                       | Additional operator to run and secure in the cluster. |
-| Speed to deploy        | Fast for one-off changes and manual runs.                                    | Great for steady, continuous changes once set up. |
-| Failure handling       | Pipeline failures stop; retries are manual or scripted.                      | Operator keeps retrying until state converges. |
-| Multi-cluster scale    | Requires orchestration in CI/CD.                                             | Operator can scale to many clusters with standard patterns. |
-
-#### When Each Approach Works Best
-
-Pipeline deployments better when:
-
-- Small teams
-- Few clusters
-- Simpler infra
-- Early stage platform
-
-GitOps is best when:
-
-- Many clusters
-- Strong compliance/audit requirements
-- Need drift correction
-- Want immutable infrastructure workflows
-
-
-# TODO
+- Create Terraform code to deploy EKS cluster with Flux installed and configured to pull the state from a development cluster.
 
 - Add tracing application such as Tempo or Jaeger.
 
 - Build and deploy custom Golang Application sending traces to Tempo/Jaeger.
 
 - Build and deploy custom Golang Application with simple CRUD API using Postgresql. Should be accessible via the Gateway API. 
-
-- Create Terraform code to deploy EKS cluster with Flux installed and configured to pull the state from a development cluster.
 
 - Add missing metrics needed to fill all the Grafana Dashboards.
 

@@ -1,38 +1,38 @@
 #!/usr/bin/env bash
 
-# update-manifests.sh
+# update-applications.sh
 # Creates the manifests based on the helm charts defined on helmfile/helmfile.yaml
-# Walks the immediate subdirectories of the "manifests" folder, finds all
+# Walks the immediate subdirectories of the "applications" folder, finds all
 # YAML files beneath each one (recursively) and writes a kustomization.yaml
 # in the top of each subdirectory listing those files as resources.
 #
-# Usage: ./update-manifests.sh
-# Run it from the repository root (where "manifests" lives).
+# Usage: ./update-applications.sh
+# Run it from the repository root (where "applications" folder is located).
 
 set -euo pipefail
 
-manifests_dir="manifests"
+applications_dir="applications"
 
 # # ensure we start with a clean output tree so repeated runs don't accumulate
 # # old rendered resources.  helmfile's --output-dir-template simply writes files
 # # and does not delete what was there previously.  We only want to remove the
-# # second‑level directories (e.g. manifests/alloy/alloy), leaving the top‑level
+# # second‑level directories (e.g. applications/alloy/alloy), leaving the top‑level
 # # folder itself and any other files behind.
-for dir in "$manifests_dir"/*/; do
+for dir in "$applications_dir"/*/; do
     rm -rf "${dir}/$(basename "$dir")"
 done
 
-helmfile template -f helmfile/helmfile.yaml --include-crds --output-dir-template "../${manifests_dir}/{{ .Release.Name }}"
+helmfile template -f helmfile/helmfile.yaml --include-crds --output-dir-template "../${applications_dir}/{{ .Release.Name }}"
 
-if [[ ! -d "$manifests_dir" ]]; then
-    echo "error: '$manifests_dir' directory not found" >&2
+if [[ ! -d "$applications_dir" ]]; then
+    echo "error: '$applications_dir' directory not found" >&2
     exit 1
 fi
 
-# For each inner release directory we just generated (manifests/<release>/<release>)
+# For each inner release directory we just generated (applications/<release>/<release>)
 # the glob picks up the second-level folder so kustomization files live next to
 # the rendered YAMLs and resource paths are relative.
-for dir in "$manifests_dir"/*/; do
+for dir in "$applications_dir"/*/; do
 
     chart_templates_dir="${dir}$(basename "$dir")" # Only this directory should have the kustomization.yaml automatically created
 
@@ -73,7 +73,7 @@ done
 
 # Making sure that every application has a root kustomization.yaml if missing
 # This file can be manually updated since it will only be created once
-for dir in "$manifests_dir"/*/; do
+for dir in "$applications_dir"/*/; do
     outfile="${dir}/kustomization.yaml"
     if [ ! -f "$outfile" ]; then
         # Write kustomization.yaml in the child directory    
