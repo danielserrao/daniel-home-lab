@@ -2,12 +2,12 @@
 # kind: Kustomization
 
 resources:
-- ../../../manifests/alloy
-- ../../../manifests/kube-prometheus-stack
-- ../../../manifests/loki
-- ../../../manifests/cloudnative-pg
-- ../../../manifests/gateway-api # Depends on nginx-gateway-fabric
-- ../../../manifests/nginx-gateway-fabric
+- ../../../applications/alloy
+- ../../../applications/kube-prometheus-stack
+- ../../../applications/loki
+- ../../../applications/cloudnative-pg
+- ../../../applications/gateway-api # Depends on nginx-gateway-fabric
+- ../../../applications/nginx-gateway-fabric
 
 labels:
 - pairs:
