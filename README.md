@@ -1,6 +1,6 @@
 # Introduction
 
-This is just my personal and public home lab for the purpose of doing tests and demos focused on Kubernetes, GitOps and Observability.
+This is my personal and public repo to experiment and do demos about Observability, Kubernetes and GitOps.
 
 Feel free to fork it and reuse it.
 
